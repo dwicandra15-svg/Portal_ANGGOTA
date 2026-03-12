@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Portal Anggota - Paguyuban Poltera</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --secondary: #ec4899;
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --border: #e5e7eb;
+  --nav-height: 70px;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom));
+}
+
+/* Login Screen */
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+}
+
+.login-card {
+  background: white;
+  border-radius: 20px;
+  padding: 32px 24px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+  max-width: 400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.login-logo {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.login-logo-icon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  margin-bottom: 16px;
+}
+
+.login-logo h1 {
+  font-size: 24px;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 8px;
+}
+
+.login-logo p {
+  font-size: 14px;
+  color: rgba(255,255,255,0.9);
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+
+.btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+}
+
+.btn-secondary {
+  background: white;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+  margin-top: 12px;
+}
+
+.password-field {
+  position: relative;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.text-link {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.text-link a {
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.watermark {
+  text-align: center;
+  padding: 24px;
+  color: rgba(255,255,255,0.8);
+  font-size: 12px;
+}
+
+/* App Screen */
+.app-screen {
+  display: none;
+  min-height: 100vh;
+  background: var(--bg-secondary);
+}
+
+.app-screen.active {
+  display: block;
+}
+
+/* Header */
+.app-header {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  padding: 20px;
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-photo {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.profile-info h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.profile-info p {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+/* Content Area */
+.app-content {
+  padding: 20px 20px 100px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+  animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Cards */
+.card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.stat-item {
+  background: var(--bg-secondary);
+  padding: 16px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.stat-value.success { color: var(--success); }
+.stat-value.danger { color: var(--danger); }
+
+/* Info Row */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.info-row:last-child {
+  border: none;
+  padding-bottom: 0;
+}
+
+.info-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.info-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Transaction Item */
+.transaction-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.transaction-item:last-child {
+  border: none;
+}
+
+.transaction-info {
+  flex: 1;
+}
+
+.transaction-type {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.transaction-date {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.transaction-amount {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.transaction-amount.in { color: var(--success); }
+.transaction-amount.out { color: var(--danger); }
+
+/* Filter */
+.filter-section {
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.filter-row input,
+.filter-row select {
+  padding: 10px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.filter-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.btn-filter {
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+
+.btn-apply {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-reset {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+.btn-download {
+  background: var(--success);
+  color: white;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  width: 100%;
+  cursor: pointer;
+  margin-top: 12px;
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--nav-height);
+  background: white;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-secondary);
+}
+
+.nav-item.active {
+  color: var(--primary);
+}
+
+.nav-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.nav-label {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Badge */
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.badge-success { background: #d1fae5; color: #065f46; }
+.badge-danger { background: #fee2e2; color: #991b1b; }
+.badge-warning { background: #fef3c7; color: #92400e; }
+
+/* Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: flex-end;
+  z-index: 2000;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: white;
+  width: 100%;
+  border-radius: 20px 20px 0 0;
+  padding: 24px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* Alert */
+.alert {
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.alert-success { background: #d1fae5; color: #065f46; }
+.alert-error { background: #fee2e2; color: #991b1b; }
+.alert-info { background: #dbeafe; color: #1e40af; }
+
+/* Loading */
+.loading {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.hidden { display: none !important; }
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 100px;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading" class="loading hidden">
+  <div class="spinner"></div>
+</div>
+
+<!-- Login Screen -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-logo">
+    <div class="login-logo-icon">🏦</div>
+    <h1 style="color: white;">Portal Anggota</h1>
+    <p style="color: rgba(255,255,255,0.9);">Paguyuban Simpan Pinjam</p>
+  </div>
+
+  <div class="login-card">
+    <h2 style="margin-bottom: 20px;">Masuk ke Akun</h2>
+    <div id="loginAlert"></div>
+    
+    <div class="form-group">
+      <label>Nama Lengkap</label>
+      <input type="text" id="loginNama" placeholder="Nama lengkap">
+    </div>
+
+    <div class="form-group">
+      <label>Password</label>
+      <div class="password-field">
+        <input type="password" id="loginPassword" placeholder="Password">
+        <span class="password-toggle" onclick="togglePassword('loginPassword')">👁️</span>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="login()">Masuk</button>
+    <button class="btn btn-secondary" onclick="showAktivasiModal()">Aktivasi Akun</button>
+    
+    <div class="text-link">
+      <a onclick="showResetModal()">Lupa Password?</a>
+    </div>
+  </div>
+
+  <div class="watermark">Developed by D.D Candra © 2026</div>
+</div>
+
+<!-- App Screen -->
+<div id="appScreen" class="app-screen">
+  <!-- Header -->
+  <div class="app-header">
+    <div class="header-profile">
+      <div class="profile-photo" id="headerPhoto">👤</div>
+      <div class="profile-info">
+        <h2 id="headerName">-</h2>
+        <p id="headerStatus">-</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="app-content">
+    <!-- Dashboard Tab -->
+    <div id="tabDashboard" class="tab-content active">
+      <div class="card">
+        <div class="stat-grid">
+          <div class="stat-item">
+            <div class="stat-label">Total Iuran</div>
+            <div class="stat-value success" id="statIuran">Rp 0</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Sisa Piutang</div>
+            <div class="stat-value danger" id="statPiutang">Rp 0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📋 Informasi Anggota</div>
+        <div class="info-row">
+          <span class="info-label">Status</span>
+          <span class="info-value" id="infoStatus">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Tanggal Masuk</span>
+          <span class="info-value" id="infoMasuk">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Lama Anggota</span>
+          <span class="info-value" id="infoLama">-</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pengajuan Tab -->
+    <div id="tabPengajuan" class="tab-content">
+      <div class="card">
+        <div class="card-title">💰 Ajukan Pinjaman</div>
+        <div id="pengajuanAlert"></div>
+        
+        <div class="form-group">
+          <label>Jumlah Pinjaman (Rp)</label>
+          <input type="number" id="pengajuanNominal" placeholder="0" min="0">
+        </div>
+
+        <div class="form-group">
+          <label>Lama Angsuran (Bulan)</label>
+          <input type="number" id="pengajuanLamaAngsuran" placeholder="Maksimal 12 bulan" min="1" max="12">
+          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Maksimal 12 bulan</p>
+        </div>
+
+        <button class="btn btn-primary" onclick="submitPengajuan()">Kirim Pengajuan</button>
+      </div>
+    </div>
+
+    <!-- History Tab -->
+    <div id="tabHistory" class="tab-content">
+      <div class="filter-section">
+        <div class="filter-row">
+          <input type="date" id="filterTanggal" placeholder="Tanggal">
+          <select id="filterJenis">
+            <option value="">Semua Jenis</option>
+            <option value="IURAN">Iuran</option>
+            <option value="ANGSURAN">Angsuran</option>
+            <option value="PINJAMAN">Pinjaman</option>
+          </select>
+        </div>
+        <div class="filter-buttons">
+          <button class="btn-filter btn-apply" onclick="applyFilter()">Terapkan</button>
+          <button class="btn-filter btn-reset" onclick="resetFilter()">Reset</button>
+        </div>
+        <button class="btn-download" onclick="downloadPDF()">📄 Download PDF</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📜 Riwayat Transaksi</div>
+        <div id="historyList"></div>
+      </div>
+    </div>
+
+    <!-- Setting Tab -->
+    <div id="tabSetting" class="tab-content">
+      <div class="card">
+        <div class="card-title">👤 Profil</div>
+        <div style="text-align: center; margin-bottom: 20px;">
+          <div class="profile-photo" id="settingPhoto" style="width: 100px; height: 100px; margin: 0 auto 12px; font-size: 48px;">👤</div>
+          <label class="btn btn-primary" style="display: inline-block; width: auto; padding: 10px 20px;">
+            Upload Foto
+            <input type="file" accept="image/*" onchange="uploadFoto(this)" style="display: none;">
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>Nama Lengkap</label>
+          <input type="text" id="settingNama" disabled>
+        </div>
+
+        <div class="form-group">
+          <label>Status</label>
+          <input type="text" id="settingStatus" disabled>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🔒 Keamanan</div>
+        <button class="btn btn-primary" onclick="showUbahPasswordModal()">Ubah Password</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📄 Customize Kop Laporan</div>
+        
+        <div class="form-group">
+          <label>Judul Laporan</label>
+          <input type="text" id="kopTitle" placeholder="Rekening Koran">
+        </div>
+
+        <div class="form-group">
+          <label>Subjudul</label>
+          <input type="text" id="kopSubtitle" placeholder="Paguyuban Simpan Pinjam">
+        </div>
+
+        <div class="form-group">
+          <label>Logo Laporan</label>
+          <input type="file" accept="image/*" id="kopLogo" onchange="previewKopLogo(this)">
+          <div id="kopLogoPreview" style="margin-top: 12px; display: none;">
+            <img id="kopLogoImg" style="max-width: 100px; border-radius: 8px;">
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="saveKopSettings()">Simpan Pengaturan Kop</button>
+      </div>
+
+      <div class="card">
+        <button class="btn btn-primary" style="background: var(--danger);" onclick="logout()">🚪 Keluar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <div class="bottom-nav">
+    <div class="nav-item active" onclick="switchTab('dashboard')">
+      <div class="nav-icon">🏠</div>
+      <div class="nav-label">Dashboard</div>
+    </div>
+    <div class="nav-item" onclick="switchTab('pengajuan')">
+      <div class="nav-icon">💰</div>
+      <div class="nav-label">Pengajuan</div>
+    </div>
+    <div class="nav-item" onclick="switchTab('history')">
+      <div class="nav-icon">📜</div>
+      <div class="nav-label">History</div>
+    </div>
+    <div class="nav-item" onclick="switchTab('setting')">
+      <div class="nav-icon">⚙️</div>
+      <div class="nav-label">Setting</div>
+    </div>
+  </div>
+</div>
+
+<!-- Modals -->
+<div id="modalAktivasi" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Aktivasi Akun</h3>
+      <button class="modal-close" onclick="closeModal('modalAktivasi')">✕</button>
+    </div>
+    <div id="aktivasiAlert"></div>
+    <div class="form-group">
+      <label>Nama Lengkap</label>
+      <input type="text" id="aktivasiNama">
+    </div>
+    <div class="form-group">
+      <label>Buat Password (min 6 digit)</label>
+      <input type="password" id="aktivasiPassword">
+    </div>
+    <div class="form-group">
+      <label>Konfirmasi Password</label>
+      <input type="password" id="aktivasiKonfirmasi">
+    </div>
+    <button class="btn btn-primary" onclick="aktivasiAkun()">Aktivasi</button>
+  </div>
+</div>
+
+<div id="modalUbahPassword" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Ubah Password</h3>
+      <button class="modal-close" onclick="closeModal('modalUbahPassword')">✕</button>
+    </div>
+    <div id="ubahPasswordAlert"></div>
+    <div class="form-group">
+      <label>Password Lama</label>
+      <input type="password" id="passwordLama">
+    </div>
+    <div class="form-group">
+      <label>Password Baru (min 6 digit)</label>
+      <input type="password" id="passwordBaru">
+    </div>
+    <div class="form-group">
+      <label>Konfirmasi Password Baru</label>
+      <input type="password" id="passwordKonfirmasi">
+    </div>
+    <button class="btn btn-primary" onclick="ubahPassword()">Ubah Password</button>
+  </div>
+</div>
+
+<div id="modalReset" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Lupa Password</h3>
+      <button class="modal-close" onclick="closeModal('modalReset')">✕</button>
+    </div>
+    <div class="alert alert-info">
+      Untuk reset password, hubungi admin via WA/telpon.
+    </div>
+    <button class="btn btn-secondary" onclick="closeModal('modalReset')">Tutup</button>
+  </div>
+</div>
+
+<script>
+// Config
+var SB_URL = 'https://xqscatmkwzpollfloxwu.supabase.co';
+var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhxc2NhdG1rd3pwb2xsZmxveHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAyMjQ3NTQsImV4cCI6MjA4NTgwMDc1NH0.BPy_JoR_hrhVHxviHxAuv_8CF5ZyzrvXkp872UecwHU';
+var sbClient = null;
+var currentAnggota = null;
+var allTransactions = [];
+var filteredTransactions = [];
+var kopSettings = {
+  title: 'REKENING KORAN',
+  subtitle: 'Paguyuban Simpan Pinjam',
+  logo: null
+};
+
+// Init
+document.addEventListener('DOMContentLoaded', function() {
+  sbClient = window.supabase.createClient(SB_URL, SB_KEY);
+  checkLogin();
+  loadKopSettings();
+});
+
+function checkLogin() {
+  var data = localStorage.getItem('anggota_data');
+  if (data) {
+    currentAnggota = JSON.parse(data);
+    showApp();
+  }
+}
+
+// Auth Functions
+function hashPassword(pass) {
+  return CryptoJS.SHA256(pass).toString();
+}
+
+function togglePassword(id) {
+  var input = document.getElementById(id);
+  input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+async function login() {
+  var nama = document.getElementById('loginNama').value.trim();
+  var password = document.getElementById('loginPassword').value.trim();
+
+  if (!nama || !password) {
+    showAlert('loginAlert', 'Nama dan password wajib diisi!', 'error');
+    return;
+  }
+
+  showLoading(true);
+  
+  try {
+    var result = await sbClient.from('anggota').select('*').ilike('nama', nama).single();
+
+    if (result.error || !result.data) {
+      showAlert('loginAlert', 'Nama tidak ditemukan!', 'error');
+      showLoading(false);
+      return;
+    }
+
+    var anggota = result.data;
+
+    if (!anggota.is_activated || !anggota.password) {
+      showAlert('loginAlert', 'Akun belum diaktivasi!', 'error');
+      showLoading(false);
+      return;
+    }
+
+    if (anggota.password !== hashPassword(password)) {
+      showAlert('loginAlert', 'Password salah!', 'error');
+      showLoading(false);
+      return;
+    }
+
+    currentAnggota = anggota;
+    localStorage.setItem('anggota_data', JSON.stringify(anggota));
+    showApp();
+  } catch (e) {
+    showAlert('loginAlert', 'Login gagal: ' + e.message, 'error');
+  }
+  
+  showLoading(false);
+}
+
+async function aktivasiAkun() {
+  var nama = document.getElementById('aktivasiNama').value.trim();
+  var password = document.getElementById('aktivasiPassword').value.trim();
+  var konfirmasi = document.getElementById('aktivasiKonfirmasi').value.trim();
+
+  if (!nama || !password || !konfirmasi) {
+    showAlert('aktivasiAlert', 'Semua field wajib diisi!', 'error');
+    return;
+  }
+
+  if (password.length < 6 || !/^\d+$/.test(password)) {
+    showAlert('aktivasiAlert', 'Password minimal 6 digit angka!', 'error');
+    return;
+  }
+
+  if (password !== konfirmasi) {
+    showAlert('aktivasiAlert', 'Konfirmasi password tidak cocok!', 'error');
+    return;
+  }
+
+  showLoading(true);
+
+  try {
+    var result = await sbClient.from('anggota').select('*').ilike('nama', nama).single();
+
+    if (result.error || !result.data) {
+      showAlert('aktivasiAlert', 'Nama tidak ditemukan!', 'error');
+      showLoading(false);
+      return;
+    }
+
+    var anggota = result.data;
+
+    if (anggota.is_activated) {
+      showAlert('aktivasiAlert', 'Akun sudah diaktivasi!', 'error');
+      showLoading(false);
+      return;
+    }
+
+    await sbClient.from('anggota').update({
+      password: hashPassword(password),
+      is_activated: true
+    }).eq('id', anggota.id);
+
+    showAlert('aktivasiAlert', 'Aktivasi berhasil! Silakan login.', 'success');
+
+    setTimeout(() => {
+      closeModal('modalAktivasi');
+      document.getElementById('loginNama').value = nama;
+    }, 2000);
+
+  } catch (e) {
+    showAlert('aktivasiAlert', 'Aktivasi gagal: ' + e.message, 'error');
+  }
+
+  showLoading(false);
+}
+
+async function ubahPassword() {
+  var lama = document.getElementById('passwordLama').value.trim();
+  var baru = document.getElementById('passwordBaru').value.trim();
+  var konfirmasi = document.getElementById('passwordKonfirmasi').value.trim();
+
+  if (!lama || !baru || !konfirmasi) {
+    showAlert('ubahPasswordAlert', 'Semua field wajib diisi!', 'error');
+    return;
+  }
+
+  if (baru.length < 6 || !/^\d+$/.test(baru)) {
+    showAlert('ubahPasswordAlert', 'Password baru minimal 6 digit angka!', 'error');
+    return;
+  }
+
+  if (baru !== konfirmasi) {
+    showAlert('ubahPasswordAlert', 'Konfirmasi password tidak cocok!', 'error');
+    return;
+  }
+
+  if (hashPassword(lama) !== currentAnggota.password) {
+    showAlert('ubahPasswordAlert', 'Password lama salah!', 'error');
+    return;
+  }
+
+  showLoading(true);
+
+  try {
+    await sbClient.from('anggota').update({
+      password: hashPassword(baru)
+    }).eq('id', currentAnggota.id);
+
+    currentAnggota.password = hashPassword(baru);
+    localStorage.setItem('anggota_data', JSON.stringify(currentAnggota));
+
+    showAlert('ubahPasswordAlert', 'Password berhasil diubah!', 'success');
+
+    setTimeout(() => {
+      closeModal('modalUbahPassword');
+    }, 2000);
+
+  } catch (e) {
+    showAlert('ubahPasswordAlert', 'Gagal ubah password: ' + e.message, 'error');
+  }
+
+  showLoading(false);
+}
+
+function logout() {
+  if (confirm('Yakin ingin keluar?')) {
+    localStorage.removeItem('anggota_data');
+    currentAnggota = null;
+    document.getElementById('appScreen').classList.remove('active');
+    document.getElementById('loginScreen').style.display = 'flex';
+  }
+}
+
+// App Functions
+async function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').classList.add('active');
+  await loadData();
+}
+
+async function loadData() {
+  if (!currentAnggota) return;
+
+  showLoading(true);
+
+  try {
+    // Header
+    document.getElementById('headerName').textContent = currentAnggota.nama;
+    document.getElementById('headerStatus').textContent = 'Status: ' + (currentAnggota.status || 'AKTIF');
+    
+    if (currentAnggota.foto_profil) {
+      var photoHTML = '<img src="' + currentAnggota.foto_profil + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+      document.getElementById('headerPhoto').innerHTML = photoHTML;
+      document.getElementById('settingPhoto').innerHTML = photoHTML;
+    }
+
+    // Iuran
+    var iuranResult = await sbClient.from('iuran').select('nominal').eq('anggota', currentAnggota.nama);
+    var totalIuran = 0;
+    if (iuranResult.data) {
+      totalIuran = iuranResult.data.reduce((a, b) => a + (b.nominal || 0), 0);
+    }
+    document.getElementById('statIuran').textContent = 'Rp ' + totalIuran.toLocaleString('id-ID');
+
+    // Pinjaman
+    var pinjamanResult = await sbClient.from('pinjaman').select('*').eq('anggota', currentAnggota.nama);
+    var sisaPiutang = 0;
+    if (pinjamanResult.data) {
+      sisaPiutang = pinjamanResult.data.reduce((a, b) => a + (b.sisa || 0), 0);
+    }
+    document.getElementById('statPiutang').textContent = 'Rp ' + sisaPiutang.toLocaleString('id-ID');
+
+    // Info
+    document.getElementById('infoStatus').innerHTML = currentAnggota.status === 'AKTIF' ? 
+      '<span class="badge badge-success">AKTIF</span>' : 
+      '<span class="badge badge-danger">KELUAR</span>';
+    document.getElementById('infoMasuk').textContent = currentAnggota.masuk ? 
+      new Date(currentAnggota.masuk).toLocaleDateString('id-ID') : '-';
+    var lama = hitungLama(currentAnggota.masuk);
+    document.getElementById('infoLama').textContent = lama;
+
+    // Setting
+    document.getElementById('settingNama').value = currentAnggota.nama;
+    document.getElementById('settingStatus').value = currentAnggota.status || 'AKTIF';
+
+    // Load transactions
+    await loadTransactions();
+
+  } catch (e) {
+    console.error('Load error:', e);
+  }
+
+  showLoading(false);
+}
+
+async function loadTransactions() {
+  allTransactions = [];
+
+  try {
+    var iuranResult = await sbClient.from('iuran').select('*').eq('anggota', currentAnggota.nama).order('created_at', { ascending: false });
+    var angsuranResult = await sbClient.from('angsuran').select('*').eq('anggota', currentAnggota.nama).order('created_at', { ascending: false });
+    var pinjamanResult = await sbClient.from('pinjaman').select('*').eq('anggota', currentAnggota.nama).order('tanggal', { ascending: false });
+
+    if (iuranResult.data) {
+      iuranResult.data.forEach(function(i) {
+        allTransactions.push({
+          type: 'IURAN',
+          label: 'Iuran ' + i.bulan,
+          date: i.created_at,
+          amount: i.nominal,
+          direction: 'in'
+        });
+      });
+    }
+
+    if (angsuranResult.data) {
+      angsuranResult.data.forEach(function(a) {
+        allTransactions.push({
+          type: 'ANGSURAN',
+          label: 'Angsuran ke-' + a.ke,
+          date: a.created_at,
+          amount: a.nominal,
+          direction: 'in'
+        });
+      });
+    }
+
+    if (pinjamanResult.data) {
+      pinjamanResult.data.forEach(function(p) {
+        allTransactions.push({
+          type: 'PINJAMAN',
+          label: 'Pinjaman Dicairkan',
+          date: p.tanggal + 'T00:00:00',
+          amount: p.nominal,
+          direction: 'out'
+        });
+      });
+    }
+
+    allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+    filteredTransactions = allTransactions;
+    renderTransactions();
+
+  } catch (e) {
+    console.error('Load transactions error:', e);
+  }
+}
+
+function renderTransactions() {
+  var html = '';
+
+  if (filteredTransactions.length === 0) {
+    html = '<div class="empty-state"><div class="empty-icon">📋</div><p>Tidak ada transaksi</p></div>';
+  } else {
+    filteredTransactions.forEach(function(t) {
+      var date = new Date(t.date).toLocaleDateString('id-ID');
+      html += '<div class="transaction-item">';
+      html += '  <div class="transaction-info">';
+      html += '    <div class="transaction-type">' + t.label + '</div>';
+      html += '    <div class="transaction-date">' + date + '</div>';
+      html += '  </div>';
+      html += '  <div class="transaction-amount ' + t.direction + '">';
+      html += (t.direction === 'in' ? '+' : '-') + ' Rp ' + t.amount.toLocaleString('id-ID');
+      html += '  </div>';
+      html += '</div>';
+    });
+  }
+
+  document.getElementById('historyList').innerHTML = html;
+}
+
+function applyFilter() {
+  var tanggal = document.getElementById('filterTanggal').value;
+  var jenis = document.getElementById('filterJenis').value;
+
+  filteredTransactions = allTransactions.filter(function(t) {
+    var match = true;
+    
+    if (tanggal) {
+      var tDate = new Date(t.date).toISOString().split('T')[0];
+      if (tDate !== tanggal) match = false;
+    }
+    
+    if (jenis && t.type !== jenis) {
+      match = false;
+    }
+    
+    return match;
+  });
+
+  renderTransactions();
+}
+
+function resetFilter() {
+  document.getElementById('filterTanggal').value = '';
+  document.getElementById('filterJenis').value = '';
+  filteredTransactions = allTransactions;
+  renderTransactions();
+}
+
+async function downloadPDF() {
+  showLoading(true);
+
+  try {
+    var { jsPDF } = window.jspdf;
+    var doc = new jsPDF();
+    var y = 20;
+
+    // Logo
+    if (kopSettings.logo) {
+      try {
+        doc.addImage(kopSettings.logo, 'JPEG', 15, 10, 20, 20);
+      } catch(e) {
+        console.log('Logo error:', e);
+      }
+    }
+
+    // Header
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text(kopSettings.title, 105, y, { align: 'center' });
+    
+    y += 7;
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(kopSettings.subtitle, 105, y, { align: 'center' });
+
+    y += 10;
+    doc.setFontSize(9);
+    doc.text('Nama: ' + currentAnggota.nama, 15, y);
+    
+    y += 7;
+    doc.text('Periode: ' + new Date().toLocaleDateString('id-ID'), 15, y);
+
+    y += 10;
+    doc.line(15, y, 195, y);
+    
+    y += 8;
+    doc.setFont(undefined, 'bold');
+    doc.text('Tanggal', 15, y);
+    doc.text('Jenis', 50, y);
+    doc.text('Keterangan', 80, y);
+    doc.text('Debet', 140, y);
+    doc.text('Kredit', 170, y);
+    
+    y += 2;
+    doc.line(15, y, 195, y);
+
+    // Data
+    y += 6;
+    doc.setFont(undefined, 'normal');
+    
+    var totalDebet = 0;
+    var totalKredit = 0;
+
+    filteredTransactions.forEach(function(t) {
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
+
+      var date = new Date(t.date).toLocaleDateString('id-ID');
+      doc.text(date, 15, y);
+      doc.text(t.type, 50, y);
+      doc.text(t.label, 80, y);
+      
+      if (t.direction === 'in') {
+        totalDebet += t.amount;
+        doc.text('Rp ' + t.amount.toLocaleString('id-ID'), 140, y);
+      } else {
+        totalKredit += t.amount;
+        doc.text('Rp ' + t.amount.toLocaleString('id-ID'), 170, y);
+      }
+      
+      y += 6;
+    });
+
+    // Footer
+    doc.line(15, y, 195, y);
+    y += 6;
+    doc.setFont(undefined, 'bold');
+    doc.text('TOTAL', 80, y);
+    doc.text('Rp ' + totalDebet.toLocaleString('id-ID'), 140, y);
+    doc.text('Rp ' + totalKredit.toLocaleString('id-ID'), 170, y);
+    
+    y += 8;
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'normal');
+    doc.text('Dicetak: ' + new Date().toLocaleString('id-ID'), 15, y);
+    doc.text('Developed by D.D Candra © 2026', 195, y, { align: 'right' });
+
+    doc.save('rekening-koran-' + currentAnggota.nama + '.pdf');
+
+  } catch (e) {
+    alert('Gagal download PDF: ' + e.message);
+  }
+
+  showLoading(false);
+}
+
+async function submitPengajuan() {
+  var nominal = parseInt(document.getElementById('pengajuanNominal').value);
+  var lamaAngsuran = parseInt(document.getElementById('pengajuanLamaAngsuran').value);
+
+  if (!nominal || nominal <= 0) {
+    showAlert('pengajuanAlert', 'Nominal harus lebih dari 0!', 'error');
+    return;
+  }
+
+  if (!lamaAngsuran || lamaAngsuran <= 0) {
+    showAlert('pengajuanAlert', 'Lama angsuran wajib diisi!', 'error');
+    return;
+  }
+
+  if (lamaAngsuran > 12) {
+    showAlert('pengajuanAlert', 'Lama angsuran maksimal 12 bulan!', 'error');
+    return;
+  }
+
+  showLoading(true);
+
+  try {
+    await sbClient.from('pengajuan').insert([{
+      anggota: currentAnggota.nama,
+      nominal: nominal,
+      lama_angsuran: lamaAngsuran,
+      status: 'MENUNGGU'
+    }]);
+
+    showAlert('pengajuanAlert', 'Pengajuan berhasil dikirim!', 'success');
+    document.getElementById('pengajuanNominal').value = '';
+    document.getElementById('pengajuanLamaAngsuran').value = '';
+
+  } catch (e) {
+    showAlert('pengajuanAlert', 'Gagal: ' + e.message, 'error');
+  }
+
+  showLoading(false);
+}
+
+async function uploadFoto(input) {
+  var file = input.files[0];
+  if (!file) return;
+
+  if (file.size > 2 * 1024 * 1024) {
+    alert('Max 2MB');
+    return;
+  }
+
+  showLoading(true);
+
+  var reader = new FileReader();
+  reader.onload = async function(e) {
+    var base64 = e.target.result;
+
+    try {
+      await sbClient.from('anggota').update({ foto_profil: base64 }).eq('id', currentAnggota.id);
+
+      var photoHTML = '<img src="' + base64 + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+      document.getElementById('headerPhoto').innerHTML = photoHTML;
+      document.getElementById('settingPhoto').innerHTML = photoHTML;
+
+      currentAnggota.foto_profil = base64;
+      localStorage.setItem('anggota_data', JSON.stringify(currentAnggota));
+
+      alert('Foto berhasil diupload!');
+    } catch (e) {
+      alert('Gagal upload: ' + e.message);
+    }
+
+    showLoading(false);
+  };
+
+  reader.readAsDataURL(file);
+}
+
+function previewKopLogo(input) {
+  var file = input.files[0];
+  if (!file) return;
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    kopSettings.logo = e.target.result;
+    document.getElementById('kopLogoImg').src = e.target.result;
+    document.getElementById('kopLogoPreview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveKopSettings() {
+  kopSettings.title = document.getElementById('kopTitle').value || 'REKENING KORAN';
+  kopSettings.subtitle = document.getElementById('kopSubtitle').value || 'Paguyuban Simpan Pinjam';
+
+  localStorage.setItem('kop_settings', JSON.stringify(kopSettings));
+  alert('Pengaturan kop berhasil disimpan!');
+}
+
+function loadKopSettings() {
+  var saved = localStorage.getItem('kop_settings');
+  if (saved) {
+    kopSettings = JSON.parse(saved);
+    document.getElementById('kopTitle').value = kopSettings.title;
+    document.getElementById('kopSubtitle').value = kopSettings.subtitle;
+    if (kopSettings.logo) {
+      document.getElementById('kopLogoImg').src = kopSettings.logo;
+      document.getElementById('kopLogoPreview').style.display = 'block';
+    }
+  }
+}
+
+// UI Functions
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(function(t) {
+    t.classList.remove('active');
+  });
+  document.querySelectorAll('.nav-item').forEach(function(n) {
+    n.classList.remove('active');
+  });
+
+  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+function showModal(id) {
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.add('hidden');
+}
+
+function showAktivasiModal() {
+  showModal('modalAktivasi');
+}
+
+function showUbahPasswordModal() {
+  showModal('modalUbahPassword');
+}
+
+function showResetModal() {
+  showModal('modalReset');
+}
+
+function showLoading(show) {
+  document.getElementById('loading').classList.toggle('hidden', !show);
+}
+
+function showAlert(containerId, message, type) {
+  var className = 'alert-' + type;
+  var html = '<div class="alert ' + className + '">' + message + '</div>';
+  document.getElementById(containerId).innerHTML = html;
+}
+
+function hitungLama(tanggal) {
+  if (!tanggal) return '-';
+  
+  var masuk = new Date(tanggal);
+  var sekarang = new Date();
+  var bulan = (sekarang.getFullYear() - masuk.getFullYear()) * 12 + sekarang.getMonth() - masuk.getMonth();
+  
+  var tahun = Math.floor(bulan / 12);
+  var sisaBulan = bulan % 12;
+  
+  var text = '';
+  if (tahun > 0) text += tahun + ' tahun ';
+  if (sisaBulan > 0) text += sisaBulan + ' bulan';
+  if (!text) text = '< 1 bulan';
+  
+  return text.trim();
+}
+</script>
+
+</body>
+</html>
