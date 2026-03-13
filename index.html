@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Portal Anggota - Paguyuban Poltera</title>
+<title>Portal Anggota - Paguyuban</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -689,6 +689,12 @@ textarea:focus {
 
         <button class="btn btn-primary" onclick="submitPengajuan()">Kirim Pengajuan</button>
       </div>
+
+      <!-- Daftar Riwayat Pengajuan -->
+      <div class="card">
+        <div class="card-title">📋 Riwayat Pengajuan</div>
+        <div id="riwayatPengajuanList"></div>
+      </div>
     </div>
 
     <!-- History Tab -->
@@ -1107,6 +1113,9 @@ async function loadData() {
 
     // Load transactions
     await loadTransactions();
+    
+    // Load riwayat pengajuan
+    await loadRiwayatPengajuan();
 
   } catch (e) {
     console.error('Load error:', e);
@@ -1352,12 +1361,60 @@ async function submitPengajuan() {
     showAlert('pengajuanAlert', 'Pengajuan berhasil dikirim!', 'success');
     document.getElementById('pengajuanNominal').value = '';
     document.getElementById('pengajuanLamaAngsuran').value = '';
+    
+    // Reload riwayat pengajuan
+    await loadRiwayatPengajuan();
 
   } catch (e) {
     showAlert('pengajuanAlert', 'Gagal: ' + e.message, 'error');
   }
 
   showLoading(false);
+}
+
+async function loadRiwayatPengajuan() {
+  var html = '';
+  
+  try {
+    var result = await sbClient
+      .from('pengajuan')
+      .select('*')
+      .eq('anggota', currentAnggota.nama)
+      .order('created_at', { ascending: false });
+    
+    if (!result.data || result.data.length === 0) {
+      html = '<div class="empty-state"><div class="empty-icon">📋</div><p>Belum ada pengajuan</p></div>';
+    } else {
+      result.data.forEach(function(p) {
+        var date = new Date(p.created_at).toLocaleDateString('id-ID');
+        var statusBadge = '';
+        
+        if (p.status === 'MENUNGGU') {
+          statusBadge = '<span class="badge badge-warning">MENUNGGU</span>';
+        } else if (p.status === 'DITERIMA' || p.status === 'APPROVED') {
+          statusBadge = '<span class="badge badge-success">DITERIMA</span>';
+        } else if (p.status === 'DITOLAK' || p.status === 'REJECTED') {
+          statusBadge = '<span class="badge badge-danger">DITOLAK</span>';
+        } else {
+          statusBadge = '<span class="badge badge-warning">' + p.status + '</span>';
+        }
+        
+        html += '<div class="transaction-item">';
+        html += '  <div class="transaction-info">';
+        html += '    <div class="transaction-type">Rp ' + p.nominal.toLocaleString('id-ID') + ' • ' + p.lama_angsuran + ' bulan</div>';
+        html += '    <div class="transaction-date">' + date + '</div>';
+        html += '  </div>';
+        html += '  <div>' + statusBadge + '</div>';
+        html += '</div>';
+      });
+    }
+    
+  } catch (e) {
+    console.error('Load riwayat pengajuan error:', e);
+    html = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Gagal memuat riwayat</p></div>';
+  }
+  
+  document.getElementById('riwayatPengajuanList').innerHTML = html;
 }
 
 async function uploadFoto(input) {
