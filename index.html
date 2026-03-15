@@ -673,21 +673,65 @@ textarea:focus {
     <!-- Pengajuan Tab -->
     <div id="tabPengajuan" class="tab-content">
       <div class="card">
-        <div class="card-title">💰 Ajukan Pinjaman</div>
+        <div class="card-title">💰 Formulir Permohonan Pinjaman</div>
         <div id="pengajuanAlert"></div>
         
+        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;">
+          ⚠️ Kolom bertanda <span style="color:var(--danger);">*</span> wajib diisi
+        </p>
+
+        <!-- Data Identitas (opsional kecuali keterangan) -->
         <div class="form-group">
-          <label>Jumlah Pinjaman (Rp)</label>
-          <input type="number" id="pengajuanNominal" placeholder="0" min="0">
+          <label>NIP <span style="font-size:11px;color:var(--text-secondary);">(opsional)</span></label>
+          <input type="text" id="pengajuanNip" placeholder="Masukkan NIP">
         </div>
 
         <div class="form-group">
-          <label>Lama Angsuran (Bulan)</label>
-          <input type="number" id="pengajuanLamaAngsuran" placeholder="Maksimal 12 bulan" min="1" max="12">
+          <label>Jabatan <span style="font-size:11px;color:var(--text-secondary);">(opsional)</span></label>
+          <input type="text" id="pengajuanJabatan" placeholder="Masukkan jabatan">
+        </div>
+
+        <div class="form-group">
+          <label>No. Telepon <span style="font-size:11px;color:var(--text-secondary);">(opsional)</span></label>
+          <input type="tel" id="pengajuanTelp" placeholder="08xxxxxxxxxx">
+        </div>
+
+        <div class="form-group">
+          <label>Keperluan Pinjaman <span style="font-size:11px;color:var(--text-secondary);">(opsional)</span></label>
+          <input type="text" id="pengajuanKeperluan" placeholder="Contoh: Biaya pendidikan">
+        </div>
+
+        <div class="form-group">
+          <label>Jumlah Pinjaman (Rp) <span style="color:var(--danger);">*</span></label>
+          <input type="number" id="pengajuanNominal" placeholder="0" min="0" oninput="hitungAngsuranPreview()">
+        </div>
+
+        <div class="form-group">
+          <label>Lama Angsuran (Bulan) <span style="color:var(--danger);">*</span></label>
+          <input type="number" id="pengajuanLamaAngsuran" placeholder="Maksimal 12 bulan" min="1" max="12" oninput="hitungAngsuranPreview()">
           <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Maksimal 12 bulan</p>
         </div>
 
-        <button class="btn btn-primary" onclick="submitPengajuan()">Kirim Pengajuan</button>
+        <div class="form-group">
+          <label>Angsuran Mulai Bulan <span style="font-size:11px;color:var(--text-secondary);">(opsional)</span></label>
+          <input type="month" id="pengajuanMulaiBulan" oninput="hitungSampaiBulan()" style="width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;">
+        </div>
+
+        <div class="form-group">
+          <label>Sampai dengan Bulan <span style="font-size:11px;color:var(--text-secondary);">(otomatis)</span></label>
+          <input type="text" id="pengajuanSampaiBulan" readonly placeholder="Terisi otomatis..." style="width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:12px;font-size:14px;background:#f9fafb;color:var(--text-secondary);font-family:inherit;">
+        </div>
+
+        <!-- Preview angsuran -->
+        <div id="angsuranPreview" style="display:none; background:#f0fdf4; border:1px solid #10b981; border-radius:10px; padding:12px; margin-bottom:16px; font-size:13px;">
+          <div style="font-weight:600; color:#065f46; margin-bottom:4px;">📊 Estimasi Angsuran</div>
+          <div id="angsuranPreviewText" style="color:#047857;"></div>
+        </div>
+
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-primary" onclick="submitPengajuan()" style="flex:1;">📤 Kirim Pengajuan</button>
+          <button class="btn" onclick="downloadFormulirPDF()" style="flex:1; background:#6366f1; color:white; border:none; border-radius:12px; padding:14px; font-weight:600; font-size:14px;">📄 Download Formulir</button>
+        </div>
       </div>
 
       <!-- Daftar Riwayat Pengajuan -->
@@ -1329,28 +1373,108 @@ async function downloadPDF() {
   showLoading(false);
 }
 
+function hitungAngsuranPreview() {
+  var nominal = parseInt(document.getElementById('pengajuanNominal').value) || 0;
+  var lama = parseInt(document.getElementById('pengajuanLamaAngsuran').value) || 0;
+  var preview = document.getElementById('angsuranPreview');
+  
+  if (nominal > 0 && lama > 0 && lama <= 12) {
+    var angsuranPerBulan = Math.ceil(nominal / lama);
+    document.getElementById('angsuranPreviewText').innerHTML =
+      'Pinjaman: <strong>Rp ' + nominal.toLocaleString('id-ID') + '</strong><br>' +
+      'Angsuran per bulan: <strong>Rp ' + angsuranPerBulan.toLocaleString('id-ID') + '</strong> × ' + lama + ' kali';
+    preview.style.display = 'block';
+  } else {
+    preview.style.display = 'none';
+  }
+  // Trigger otomatis update sampai bulan
+  hitungSampaiBulan();
+}
+
+function hitungSampaiBulan() {
+  var mulai = document.getElementById('pengajuanMulaiBulan').value; // format: YYYY-MM
+  var lama = parseInt(document.getElementById('pengajuanLamaAngsuran').value) || 0;
+  var sampaiEl = document.getElementById('pengajuanSampaiBulan');
+
+  if (!mulai || lama <= 0) {
+    sampaiEl.value = '';
+    return;
+  }
+
+  // Hitung bulan akhir: mulai + (lama - 1) bulan
+  var parts = mulai.split('-');
+  var tahun = parseInt(parts[0]);
+  var bulan = parseInt(parts[1]) - 1; // 0-based
+
+  var tglSampai = new Date(tahun, bulan + lama - 1, 1);
+  var namaBulan = tglSampai.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+  sampaiEl.value = namaBulan;
+}
+
+function getNamaBulan(yyyymm) {
+  if (!yyyymm) return '';
+  var parts = yyyymm.split('-');
+  var d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+  return d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+}
+
+function angkaTerbilang(angka) {
+  var satuan = ['', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan',
+    'sepuluh', 'sebelas', 'dua belas', 'tiga belas', 'empat belas', 'lima belas', 'enam belas',
+    'tujuh belas', 'delapan belas', 'sembilan belas'];
+  if (angka < 20) return satuan[angka];
+  if (angka < 100) return satuan[Math.floor(angka/10)*10 - (Math.floor(angka/10)*10 - Math.floor(angka/10)*10)] || (Math.floor(angka/10) === 1 ? 'sepuluh' : satuan[Math.floor(angka/10)] + ' puluh') + (angka % 10 ? ' ' + satuan[angka % 10] : '');
+
+  function terbilang(n) {
+    if (n === 0) return '';
+    if (n < 20) return satuan[n];
+    if (n < 100) {
+      var t = Math.floor(n / 10);
+      var s = n % 10;
+      return (t === 1 ? 'sepuluh' : satuan[t] + ' puluh') + (s ? ' ' + satuan[s] : '');
+    }
+    if (n < 1000) {
+      var h = Math.floor(n / 100);
+      return (h === 1 ? 'seratus' : satuan[h] + ' ratus') + (n % 100 ? ' ' + terbilang(n % 100) : '');
+    }
+    if (n < 1000000) {
+      var rb = Math.floor(n / 1000);
+      return (rb === 1 ? 'seribu' : terbilang(rb) + ' ribu') + (n % 1000 ? ' ' + terbilang(n % 1000) : '');
+    }
+    if (n < 1000000000) {
+      var jt = Math.floor(n / 1000000);
+      return terbilang(jt) + ' juta' + (n % 1000000 ? ' ' + terbilang(n % 1000000) : '');
+    }
+    var ml = Math.floor(n / 1000000000);
+    return terbilang(ml) + ' miliar' + (n % 1000000000 ? ' ' + terbilang(n % 1000000000) : '');
+  }
+  return terbilang(angka);
+}
+
 async function submitPengajuan() {
   var nominal = parseInt(document.getElementById('pengajuanNominal').value);
   var lamaAngsuran = parseInt(document.getElementById('pengajuanLamaAngsuran').value);
 
   if (!nominal || nominal <= 0) {
-    showAlert('pengajuanAlert', 'Nominal harus lebih dari 0!', 'error');
+    showAlert('pengajuanAlert', 'Nominal pinjaman harus lebih dari 0!', 'error');
     return;
   }
-
   if (!lamaAngsuran || lamaAngsuran <= 0) {
     showAlert('pengajuanAlert', 'Lama angsuran wajib diisi!', 'error');
     return;
   }
-
   if (lamaAngsuran > 12) {
     showAlert('pengajuanAlert', 'Lama angsuran maksimal 12 bulan!', 'error');
     return;
   }
 
   showLoading(true);
-
   try {
+    var nip = document.getElementById('pengajuanNip').value.trim();
+    var jabatan = document.getElementById('pengajuanJabatan').value.trim();
+    var telp = document.getElementById('pengajuanTelp').value.trim();
+    var keperluan = document.getElementById('pengajuanKeperluan').value.trim();
+
     await sbClient.from('pengajuan').insert([{
       anggota: currentAnggota.nama,
       nominal: nominal,
@@ -1358,17 +1482,255 @@ async function submitPengajuan() {
       status: 'MENUNGGU'
     }]);
 
-    showAlert('pengajuanAlert', 'Pengajuan berhasil dikirim!', 'success');
-    document.getElementById('pengajuanNominal').value = '';
-    document.getElementById('pengajuanLamaAngsuran').value = '';
-    
-    // Reload riwayat pengajuan
+    showAlert('pengajuanAlert', '✅ Pengajuan berhasil dikirim! Silakan download formulir untuk arsip.', 'success');
     await loadRiwayatPengajuan();
-
   } catch (e) {
     showAlert('pengajuanAlert', 'Gagal: ' + e.message, 'error');
   }
+  showLoading(false);
+}
 
+async function downloadFormulirPDF() {
+  var nominal = parseInt(document.getElementById('pengajuanNominal').value) || 0;
+  var lamaAngsuran = parseInt(document.getElementById('pengajuanLamaAngsuran').value) || 0;
+  var nip = document.getElementById('pengajuanNip').value.trim() || '';
+  var jabatan = document.getElementById('pengajuanJabatan').value.trim() || '';
+  var telp = document.getElementById('pengajuanTelp').value.trim() || '';
+  var keperluan = document.getElementById('pengajuanKeperluan').value.trim() || '';
+  var mulaiBulanRaw = document.getElementById('pengajuanMulaiBulan').value || '';
+  var mulaiBulanLabel = mulaiBulanRaw ? getNamaBulan(mulaiBulanRaw) : '...............';
+  var sampaiBulanLabel = document.getElementById('pengajuanSampaiBulan').value || '...............';
+
+  if (!nominal || nominal <= 0) {
+    showAlert('pengajuanAlert', 'Isi nominal pinjaman terlebih dahulu!', 'error');
+    return;
+  }
+  if (!lamaAngsuran || lamaAngsuran <= 0) {
+    showAlert('pengajuanAlert', 'Isi lama angsuran terlebih dahulu!', 'error');
+    return;
+  }
+
+  showLoading(true);
+  try {
+    // Ambil tanggal pencairan dari admin (tanggal di tabel pinjaman)
+    var tanggalPencairan = '-';
+    try {
+      var pinjamanResult = await sbClient
+        .from('pinjaman')
+        .select('tanggal')
+        .eq('anggota', currentAnggota.nama)
+        .order('tanggal', { ascending: false })
+        .limit(1);
+      if (pinjamanResult.data && pinjamanResult.data.length > 0 && pinjamanResult.data[0].tanggal) {
+        tanggalPencairan = new Date(pinjamanResult.data[0].tanggal)
+          .toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      }
+    } catch(e) { /* jika belum ada pencairan, biarkan kosong */ }
+
+    var { jsPDF } = window.jspdf;
+    // A4: 210 x 297 mm
+    var doc = new jsPDF('p', 'mm', 'a4');
+    var pw = 210;
+    var ph = 297;
+    var mL = 25, mR = 25, mT = 20;
+    var cw = pw - mL - mR; // content width = 160mm
+    var y = mT;
+    var angsuranPerBulan = Math.ceil(nominal / lamaAngsuran);
+    var terbilang = angkaTerbilang(nominal);
+    var angsuranTerbilang = angkaTerbilang(lamaAngsuran);
+    var tanggalCetak = new Date().toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'});
+
+    // ===================================================
+    // HEADER
+    // ===================================================
+    doc.setFontSize(13);
+    doc.setFont(undefined, 'bold');
+    doc.text('FORMULIR PERMOHONAN PEMINJAMAN UANG', pw / 2, y, { align: 'center' });
+    y += 12;
+
+    // ===================================================
+    // PEMBUKA
+    // ===================================================
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text('Yth. Pengurus Paguyuban Dosen dan Tendik “POLTERA”', mL, y);
+    y += 5.5;
+    doc.text('Di tempat', mL, y);
+    y += 9;
+    doc.text('Dengan Hormat,', mL, y);
+    y += 5.5;
+    doc.text('Yang bertandatangan dibawah ini, saya :', mL, y);
+    y += 8;
+
+    // ===================================================
+    // DATA IDENTITAS — kolom rata
+    // ===================================================
+    var labelX  = mL;       // mulai label
+    var colonX  = mL + 28;  // posisi titik dua
+    var valueX  = mL + 31;  // mulai nilai
+    var rowGap  = 6.5;
+
+    var identitas = [
+      ['Nama',    currentAnggota.nama],
+      ['NIP',     nip     || ''],
+      ['Jabatan', jabatan || ''],
+      ['Telp',    telp    || ''],
+    ];
+
+    identitas.forEach(function(r) {
+      doc.setFont(undefined, 'normal');
+      doc.text(r[0], labelX, y);
+      doc.text(':', colonX, y);
+      // Garis bawah untuk nilai kosong
+      if (r[1]) {
+        doc.text(r[1], valueX, y);
+      } else {
+        doc.setDrawColor(100);
+        doc.line(valueX, y + 0.5, valueX + 70, y + 0.5);
+        doc.setDrawColor(0);
+      }
+      y += rowGap;
+    });
+
+    y += 5;
+
+    // ===================================================
+    // KALIMAT PENGANTAR
+    // ===================================================
+    var paraText = 'Dengan ini mengajukan permohonan peminjaman uang dari Paguyuban Dosen dan Tendik “POLTERA” :';
+    doc.setFontSize(10);
+    var paraLines = doc.splitTextToSize(paraText, cw);
+    doc.text(paraLines, mL, y);
+    y += paraLines.length * 5.5 + 4;
+
+    // ===================================================
+    // TABEL — lebar proporsional
+    // Kolom: No(8) | Uraian(62) | Keterangan(90)
+    // ===================================================
+    var tNo   = mL;
+    var wNo   = 10;
+    var wUr   = 58;
+    var wKet  = cw - wNo - wUr;   // sisa = 92mm
+    var tUr   = tNo + wNo;
+    var tKet  = tUr + wUr;
+    var tRowH = 9; // tinggi baris tabel
+
+    doc.setFontSize(9.5);
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.25);
+
+    var tabelRows = [
+      ['1', 'Besar Pinjaman', 'Rp ' + nominal.toLocaleString('id-ID') + ',00 (' + terbilang + ' rupiah)'],
+      ['2', 'Untuk Keperluan', keperluan || ''],
+      ['3', 'Angsuran Selama', lamaAngsuran + ' (' + angsuranTerbilang + ') Kali'],
+      ['4', 'Terima pinjaman bulan', tanggalPencairan],
+      ['5', 'Angsuran Mulai Bulan :', mulaiBulanLabel + '   Sampai dengan bulan : ' + sampaiBulanLabel],
+      ['6', 'Besar jumlah angsuran/bulan', 'Rp ' + angsuranPerBulan.toLocaleString('id-ID') + ',00'],
+    ];
+
+    tabelRows.forEach(function(row) {
+      // Split teks isian agar wrap otomatis
+      var ketLines = doc.splitTextToSize(row[2], wKet - 4);
+      // Hitung tinggi baris (minimal tRowH, lebih jika wrap)
+      var bh = Math.max(tRowH, ketLines.length * 5 + 4);
+
+      // Border sel
+      doc.rect(tNo,  y - 5, wNo,  bh);
+      doc.rect(tUr,  y - 5, wUr,  bh);
+      doc.rect(tKet, y - 5, wKet, bh);
+
+      // Teks
+      doc.text(row[0], tNo  + 2, y);
+      doc.text(row[1], tUr  + 2, y);
+      doc.text(ketLines, tKet + 2, y);
+
+      y += bh;
+    });
+
+    y += 8;
+
+    // ===================================================
+    // PARAGRAF PENUTUP — justify
+    // ===================================================
+    var penutup = 'Demikian formulir permohonan pinjaman uang ini saya isi dengan sebenar-benarnya. ' +
+      'Apabila ada kesalahan didalam mengisi formulir peminjaman ini saya bersedia menerima ' +
+      'konsekuensi dari pengurus Paguyuban Dosen dan Tendik “POLTERA”';
+    doc.setFontSize(10);
+    var pLines = doc.splitTextToSize(penutup, cw);
+    // Justify manual: setiap baris kecuali terakhir di-stretch
+    var lineH2 = 5.5;
+    pLines.forEach(function(line, i) {
+      if (i < pLines.length - 1) {
+        // Hitung ruang lebih untuk justify
+        var textW = doc.getTextWidth(line);
+        var spaces = (line.match(/ /g) || []).length;
+        if (spaces > 0) {
+          var extra = (cw - textW) / spaces;
+          doc.text(line, mL, y, { charSpace: 0 });
+          // jsPDF tidak mendukung word-spacing, pakai teks biasa
+        }
+        doc.text(line, mL, y);
+      } else {
+        doc.text(line, mL, y);
+      }
+      y += lineH2;
+    });
+
+    y += 10;
+
+    // ===================================================
+    // TANDA TANGAN — 3 blok: Kiri | Kanan | Tengah
+    // ===================================================
+    var ttdY = y;
+    var midX = pw / 2;
+    var rightX = pw - mR;
+
+    doc.setFontSize(10);
+
+    // -- Kiri: Bendahara (di-tengahkan di atas teks Paguyuban) --
+    var paguTeks = 'Paguyuban Dosen dan Tendik “POLTERA”';
+    var paguW = doc.getTextWidth(paguTeks);
+    var bendX = mL + (paguW - doc.getTextWidth('Bendahara')) / 2;
+    doc.text('Bendahara', bendX, ttdY);
+    doc.text(paguTeks, mL, ttdY + 5.5);
+
+    // -- Kanan: "Sampang, [tanggal]" satu baris + Pemohon di bawah --
+    doc.text('Sampang, ' + tanggalCetak, rightX, ttdY, { align: 'right' });
+    doc.text('Pemohon', rightX - 12, ttdY + 8, { align: 'right' });
+
+    // Spasi untuk tanda tangan (28mm)
+    y = ttdY + 33;
+
+    // Nama bendahara (kiri)
+    doc.setFont(undefined, 'normal');
+    doc.text('Naning Setyorini, SE', mL + 12, y);
+
+    // Nama pemohon (kanan)
+    doc.text(currentAnggota.nama, rightX - 12, y, { align: 'right' });
+
+    y += 14;
+
+    // -- Tengah: Mengetahui --
+    doc.text('Mengetahui', midX, y, { align: 'center' });
+    y += 5.5;
+    doc.text('Ketua Paguyuban Dosen dan Tendik “POLTERA”', midX, y, { align: 'center' });
+    y += 26;
+    doc.setFont(undefined, 'normal');
+    doc.text('M. Sohibul Hajah ST, MT', midX, y, { align: 'center' });
+
+    // ===================================================
+    // FOOTER
+    // ===================================================
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'italic');
+    doc.text('Dicetak: ' + new Date().toLocaleString('id-ID'), mL, ph - 10);
+    doc.text('Developed by D.D Candra © 2026', pw - mR, ph - 10, { align: 'right' });
+
+    doc.save('Formulir_Pinjaman_' + currentAnggota.nama.replace(/\s+/g, '_') + '.pdf');
+  } catch (e) {
+    alert('Gagal buat PDF: ' + e.message);
+    console.error(e);
+  }
   showLoading(false);
 }
 
@@ -1388,10 +1750,17 @@ async function loadRiwayatPengajuan() {
       result.data.forEach(function(p) {
         var date = new Date(p.created_at).toLocaleDateString('id-ID');
         var statusBadge = '';
+        var aksiHTML = '';
         
         if (p.status === 'MENUNGGU') {
           statusBadge = '<span class="badge badge-warning">MENUNGGU</span>';
-        } else if (p.status === 'DITERIMA' || p.status === 'APPROVED') {
+          // Tombol aksi hanya untuk pengajuan yang masih MENUNGGU
+          aksiHTML = '<div style="display:flex;gap:6px;margin-top:8px;">' +
+            '<button onclick="hapusRiwayatPengajuan(\'' + p.id + '\')" ' +
+            'style="font-size:11px;padding:4px 10px;border-radius:8px;border:none;' +
+            'background:#fee2e2;color:#991b1b;cursor:pointer;font-weight:600;">🗑 Hapus</button>' +
+            '</div>';
+        } else if (p.status === 'DITERIMA' || p.status === 'APPROVED' || p.status === 'DICAIRKAN') {
           statusBadge = '<span class="badge badge-success">DITERIMA</span>';
         } else if (p.status === 'DITOLAK' || p.status === 'REJECTED') {
           statusBadge = '<span class="badge badge-danger">DITOLAK</span>';
@@ -1399,12 +1768,15 @@ async function loadRiwayatPengajuan() {
           statusBadge = '<span class="badge badge-warning">' + p.status + '</span>';
         }
         
-        html += '<div class="transaction-item">';
-        html += '  <div class="transaction-info">';
-        html += '    <div class="transaction-type">Rp ' + p.nominal.toLocaleString('id-ID') + ' • ' + p.lama_angsuran + ' bulan</div>';
-        html += '    <div class="transaction-date">' + date + '</div>';
+        html += '<div class="transaction-item" style="flex-direction:column;align-items:stretch;">';
+        html += '  <div style="display:flex;justify-content:space-between;align-items:center;">';
+        html += '    <div class="transaction-info">';
+        html += '      <div class="transaction-type">Rp ' + p.nominal.toLocaleString('id-ID') + ' • ' + p.lama_angsuran + ' bulan</div>';
+        html += '      <div class="transaction-date">' + date + '</div>';
+        html += '    </div>';
+        html += '    <div>' + statusBadge + '</div>';
         html += '  </div>';
-        html += '  <div>' + statusBadge + '</div>';
+        html += aksiHTML;
         html += '</div>';
       });
     }
@@ -1415,6 +1787,18 @@ async function loadRiwayatPengajuan() {
   }
   
   document.getElementById('riwayatPengajuanList').innerHTML = html;
+}
+
+async function hapusRiwayatPengajuan(id) {
+  if (!confirm('Yakin ingin menghapus pengajuan ini?')) return;
+  showLoading(true);
+  try {
+    await sbClient.from('pengajuan').delete().eq('id', id);
+    await loadRiwayatPengajuan();
+  } catch (e) {
+    alert('Gagal hapus: ' + e.message);
+  }
+  showLoading(false);
 }
 
 async function uploadFoto(input) {
@@ -1535,15 +1919,19 @@ function hitungLama(tanggal) {
   
   var masuk = new Date(tanggal);
   var sekarang = new Date();
-  var bulan = (sekarang.getFullYear() - masuk.getFullYear()) * 12 + sekarang.getMonth() - masuk.getMonth();
+  // +1 karena bulan bergabung langsung terhitung sebagai bulan ke-1 (inklusif)
+  var totalBulan = (sekarang.getFullYear() - masuk.getFullYear()) * 12 
+                 + (sekarang.getMonth() - masuk.getMonth()) 
+                 + 1;
+  if (totalBulan < 1) totalBulan = 1;
   
-  var tahun = Math.floor(bulan / 12);
-  var sisaBulan = bulan % 12;
+  var tahun = Math.floor(totalBulan / 12);
+  var sisaBulan = totalBulan % 12;
   
   var text = '';
   if (tahun > 0) text += tahun + ' tahun ';
   if (sisaBulan > 0) text += sisaBulan + ' bulan';
-  if (!text) text = '< 1 bulan';
+  if (!text) text = totalBulan + ' bulan';
   
   return text.trim();
 }
